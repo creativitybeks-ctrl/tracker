@@ -16,7 +16,6 @@ const TITLES = [
 function titleForLevel(l:number){ let cur=TITLES[0].title; for (const t of TITLES) if (l>=t.lvl) cur=t.title; else break; return cur; }
 
 export default function QuestList(){
-  const [userId, setUserId] = useState<string|null>(null);
   const [quests, setQuests] = useState<any[]>([]);
   const [completedToday, setCompletedToday] = useState<number[]>([]);
   const [xp, setXp] = useState(0);
@@ -25,19 +24,15 @@ export default function QuestList(){
   const today = new Date().toISOString().slice(0,10);
 
   useEffect(() => {
-    const sub = supabase.auth.onAuthStateChange((_event, session)=>{ setUserId(session?.user?.id ?? null); });
-    supabase.auth.getSession().then(({ data }) => setUserId(data.session?.user?.id ?? null));
-    return () => { sub.data.subscription.unsubscribe(); };
-  }, []);
-
-  useEffect(() => { if (!userId) return; (async()=>{
-    const { data: q } = await supabase.from("quests").select("id,title,xp,type").order("id");
-    setQuests(q||[]);
-    const { data: c } = await supabase.from("completions").select("quest_id").eq("date", today);
-    setCompletedToday((c||[]).map((x:any)=>x.quest_id));
-    const { data: prof } = await supabase.from("profiles").select("xp,rp").single();
-    if (prof){ setXp(prof.xp||0); setRp(prof.rp||0); }
-  })(); }, [userId, today]);
+    (async()=>{
+      const { data: q } = await supabase.from("quests").select("id,title,xp,type").order("id");
+      setQuests(q||[]);
+      const { data: c } = await supabase.from("completions").select("quest_id").eq("date", today);
+      setCompletedToday((c||[]).map((x:any)=>x.quest_id));
+      const { data: prof } = await supabase.from("profiles").select("xp,rp").single();
+      if (prof){ setXp(prof.xp||0); setRp(prof.rp||0); }
+    })();
+  }, [today]);
 
   const { level } = useMemo(()=>levelFromXP(xp),[xp]);
   const title = useMemo(()=>titleForLevel(level),[level]);
